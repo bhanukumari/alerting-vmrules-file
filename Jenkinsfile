@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    triggers {
-        githubPush()
-    }
-
     stages {
         stage('Clone Repo') {
             steps {
@@ -25,7 +21,4 @@ pipeline {
             }
         }
     }
-
 }
-
-
