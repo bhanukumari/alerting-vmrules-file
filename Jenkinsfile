@@ -12,9 +12,9 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    apt-get update -y
-                    apt-get install -y python3 python3-pip
-                    python3 -m pip install pyyaml --break-system-packages
+                   sudo apt-get update -y
+                   sudo apt-get install -y python3 python3-pip
+                   sudo python3 -m pip install pyyaml --break-system-packages
                 '''
             }
         }
