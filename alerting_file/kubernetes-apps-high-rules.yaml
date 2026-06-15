@@ -1,0 +1,620 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"operator.victoriametrics.com/v1beta1","kind":"VMRule","metadata":{"annotations":{"meta.helm.sh/release-name":"alert-rules","meta.helm.sh/release-namespace":"monitoring"},"creationTimestamp":"2026-03-19T12:07:38Z","generation":33,"labels":{"app.kubernetes.io/managed-by":"Helm"},"name":"kubernetes-apps-high-rules","namespace":"monitoring","resourceVersion":"45094422","uid":"6cec5ad0-c63b-49f7-a00c-68b2e72c6011"},"spec":{"groups":[{"name":"kubernetes-apps","rules":[{"alert":"KubePodRestarting","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is restarting {{ printf \"%.2f\" $value }} times / 5 minutes.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping","summary":"Pod is Restarting."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          sum without(endpoint, job, prometheus) (rate(kube_pod_container_status_restarts_total{namespace=~\".*\"}[5m]) * 60 * 5) \u003e 1,\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Pod $1 is restarting frequently\", \"pod\", \"(.*)\")","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubePodNotReady","annotations":{"affected_component":"{{ $labels.pod }}","dashboard_url":"https://grafana.opstree.net/explore","description":"Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 5 minutes.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready","summary":"Pod has been in a non-ready state for more than 10 minutes."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          sum by (namespace, pod, env, cluster) (\n    max by(namespace, pod, env, cluster) (\n      kube_pod_status_phase{job=\"kube-state-metrics\", namespace=~\".*\", phase=~\"Pending|Unknown\"}\n    ) * on(namespace, pod) group_left(owner_kind, env) topk by(namespace, pod) (\n      1, max by(namespace, pod, owner_kind, env) (kube_pod_owner{owner_kind!=\"Job\"})\n    )\n  ) \u003e 0,\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Pod $1 is not ready for more than 10 minutes\", \"pod\", \"(.*)\")","for":"10m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeDeploymentGenerationMismatch","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Deployment generation for {{ $labels.namespace }}/{{ $labels.deployment }} does not match, this indicates that the Deployment has failed but has not been rolled back.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentgenerationmismatch","summary":"Deployment generation mismatch due to possible roll-back"},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          kube_deployment_status_observed_generation{job=\"kube-state-metrics\", namespace=~\".*\"}\n  !=\nkube_deployment_metadata_generation{job=\"kube-state-metrics\", namespace=~\".*\"},\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Deployment $1 generation mismatch detected\", \"deployment\", \"(.*)\")","for":"5m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeDeploymentReplicasMismatch","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has not matched the expected number of replicas for longer than 5 minutes.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentreplicasmismatch","summary":"Deployment has not matched the expected number of replicas."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          (\n  kube_deployment_spec_replicas{job=\"kube-state-metrics\", namespace=~\".*\"}\n    * on(namespace, deployment) group_left(pod)\n  label_replace(kube_pod_info{job=\"kube-state-metrics\", namespace=~\".*\"}, \"deployment\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\")\n)\n    !=\n(\n  kube_deployment_status_replicas_available{job=\"kube-state-metrics\", namespace=~\".*\"}\n    * on(namespace, deployment) group_left(pod)\n  label_replace(kube_pod_info{job=\"kube-state-metrics\", namespace=~\".*\"}, \"deployment\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\")\n) and on(namespace, deployment) (\n  changes(kube_deployment_status_replicas_updated{job=\"kube-state-metrics\", namespace=~\".*\"}[5m])\n    ==\n  0\n),\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Deployment $1 replicas mismatch for more than 5 minutes\", \"deployment\", \"(.*)\")","for":"5m","labels":{"Owner_Name":"Siddharth Gupta","alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeStatefulSetReplicasMismatch","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has not matched the expected number of replicas for longer than 5 minutes.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetreplicasmismatch","summary":"Deployment has not matched the expected number of replicas."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          (\n  kube_statefulset_status_replicas_ready{job=\"kube-state-metrics\", namespace=~\".*\"}\n    !=\n  kube_statefulset_status_replicas{job=\"kube-state-metrics\", namespace=~\".*\"}\n) and (\n  changes(kube_statefulset_status_replicas_updated{job=\"kube-state-metrics\", namespace=~\".*\"}[5m])\n    ==\n  0\n),\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"StatefulSet $1 replicas mismatch for more than 5 minutes\", \"statefulset\", \"(.*)\")","for":"5m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeStatefulSetGenerationMismatch","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"StatefulSet generation for {{ $labels.namespace }}/{{ $labels.statefulset }} does not match, this indicates that the StatefulSet has failed but has not been rolled back.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetgenerationmismatch","summary":"StatefulSet generation mismatch due to possible roll-back"},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          kube_statefulset_status_observed_generation{job=\"kube-state-metrics\", namespace=~\".*\"}\n  !=\nkube_statefulset_metadata_generation{job=\"kube-state-metrics\", namespace=~\".*\"},\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"StatefulSet $1 generation mismatch detected\", \"statefulset\", \"(.*)\")","for":"5m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeStatefulSetUpdateNotRolledOut","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} update has not been rolled out.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetupdatenotrolledout","summary":"StatefulSet update has not been rolled out."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          (\n  max without (revision) (\n    kube_statefulset_status_current_revision{job=\"kube-state-metrics\", namespace=~\".*\"}\n      unless\n    kube_statefulset_status_update_revision{job=\"kube-state-metrics\", namespace=~\".*\"}\n  )\n    *\n  (\n    kube_statefulset_replicas{job=\"kube-state-metrics\", namespace=~\".*\"}\n      !=\n    kube_statefulset_status_replicas_updated{job=\"kube-state-metrics\", namespace=~\".*\"}\n  )\n)  and (\n  changes(kube_statefulset_status_replicas_updated{job=\"kube-state-metrics\", namespace=~\".*\"}[5m])\n    ==\n  0\n),\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"StatefulSet $1 update not rolled out\", \"statefulset\", \"(.*)\")","for":"5m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeDaemonSetRolloutStuck","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} has not finished or progressed for at least 5 minutes.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck","summary":"DaemonSet rollout is stuck."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          (\n  (\n    kube_daemonset_status_current_number_scheduled{job=\"kube-state-metrics\", namespace=~\".*\"}\n    !=\n    kube_daemonset_status_desired_number_scheduled{job=\"kube-state-metrics\", namespace=~\".*\"}\n  ) or (\n    kube_daemonset_status_number_misscheduled{job=\"kube-state-metrics\", namespace=~\".*\"}\n    !=\n    0\n  ) or (\n    kube_daemonset_updated_number_scheduled{job=\"kube-state-metrics\", namespace=~\".*\"}\n    !=\n    kube_daemonset_status_desired_number_scheduled{job=\"kube-state-metrics\", namespace=~\".*\"}\n  ) or (\n    kube_daemonset_status_number_available{job=\"kube-state-metrics\", namespace=~\".*\"}\n    !=\n    kube_daemonset_status_desired_number_scheduled{job=\"kube-state-metrics\", namespace=~\".*\"}\n  )\n) and (\n  changes(kube_daemonset_updated_number_scheduled{job=\"kube-state-metrics\", namespace=~\".*\"}[5m])\n    ==\n  0\n),\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"DaemonSet $1 rollout is stuck for more than 5 minutes\", \"daemonset\", \"(.*)\")","for":"5m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeContainerWaiting","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Pod {{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container}} has been in waiting state for longer than 0.5 hour.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecontainerwaiting","summary":"Pod container waiting longer than 0.5 hour"},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          label_replace( label_replace( sum by (namespace, pod, container, env,cluster) (kube_pod_container_status_waiting_reason{job=\"kube-state-metrics\",namespace=~\".*\"}) \u003e 0, \"team\", \"olly\", \"cluster\", \"base-vcluster\"), \"team\",\"buildpiper\", \"cluster\", \"buildpiper\"),\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Pod $1 has been in waiting state for more than 0.5 hour\", \"pod\", \"(.*)\")","for":"30m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeDaemonSetNotScheduled","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"{{ $value }} Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} are not scheduled.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetnotscheduled","summary":"DaemonSet pods are not scheduled."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          (\n  sum without(endpoint, prometheus, job) (kube_daemonset_status_desired_number_scheduled{namespace=~\".*\"})\n  -\n  sum without(endpoint, prometheus, job) (kube_daemonset_status_current_number_scheduled{namespace=~\".*\"}) ) \u003e 0,\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"DaemonSet $1 pods are not scheduled\", \"daemonset\", \"(.*)\")","for":"5m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeDaemonSetMisScheduled","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"{{ $value }} Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} are running where they are not supposed to run.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetmisscheduled","summary":"DaemonSet pods are misscheduled."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          kube_daemonset_status_number_misscheduled{job=\"kube-state-metrics\", namespace=~\".*\"} \u003e 0,\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"DaemonSet $1 pods are misscheduled\", \"daemonset\", \"(.*)\")","for":"5m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"KubeJobFailed","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobfailed","summary":"Job failed to complete."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          kube_job_failed{job=\"kube-state-metrics\", namespace=~\".*\"}  \u003e 0,\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Job failed to complete in namespace $1\", \"namespace\", \"(.*)\")","for":"5m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"high"}},{"alert":"KubeHpaReplicasMismatch","annotations":{"description":"HPA {{ $labels.namespace }}/{{ $labels.hpa }} has not matched the desired number of replicas for longer than 5 minutes.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpareplicasmismatch","summary":"HPA has not matched desired number of replicas."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          (kube_hpa_status_desired_replicas{job=\"kube-state-metrics\", namespace=~\".*\"}\n  !=\nkube_hpa_status_current_replicas{job=\"kube-state-metrics\", namespace=~\".*\"})\n  and\nchanges(kube_hpa_status_current_replicas[15m]) == 0,\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"HPA replicas mismatch in namespace $1\", \"namespace\", \"(.*)\")","for":"15m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"high"}},{"alert":"KubePodRestartingOOM","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Pod {{$labels.pod}} in namespace {{$labels.namespace}} has a container terminated for more than 1 minute","message":"Pod {{$labels.pod}} in namespace {{$labels.namespace}} in terminated status","summary":"Pod Container OOMKilled Detected"},"expr":"label_replace(\nlabel_replace( label_replace( label_replace( label_replace( sum without(endpoint, job, prometheus) (kube_pod_container_status_terminated_reason{reason=\"OOMKilled\"}) \u003e 0, \"team\", \"olly\", \"cluster\", \"base-vcluster\"), \"team\", \"buildpiper\", \"cluster\", \"buildpiper\"), \"channel\", \"ldc-infra-alerts\", \"cluster\", \"base-vcluster\"), \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"buildpiper\"),\n\"description\", \"Pod $1 is OOMKilled\", \"pod\", \"(.*)\")","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"PodHighCpuUsageWarning","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Pod {{ $labels.pod }} in cluster {{ $labels.cluster }} is using more than 70% of CPU.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md","summary":"Warning: Pod CPU usage is high."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          (\n  sum(rate(container_cpu_usage_seconds_total{namespace=~\".*\", container!=\"POD\", container!=\"\", pod!=\"\"}[5m])) by (namespace, pod , cluster)\n  ) /\n(\n  sum(kube_pod_container_resource_limits{namespace=~\".*\", pod=~\".*\", resource=\"cpu\"}) by (namespace, pod , cluster)\n  ) * 100 \u003e 70,\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Pod $1 CPU usage is above 70 percent\", \"pod\", \"(.*)\")","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}},{"alert":"PodHighMemoryUsageCritical","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Pod {{ $labels.pod }} is using more than 85% of its memory limit.","runbook_url":"https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md","summary":"Critical: Pod memory usage is very high."},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          label_replace(\n  label_replace(\n    label_replace(\n(\n  sum(container_memory_usage_bytes{namespace=~\".*\", container!=\"POD\", container!=\"\", pod!=\"\"}) by (namespace, pod , cluster)\n) / clamp_min(\n  sum(kube_pod_container_resource_limits{namespace=~\".*\", pod=~\".*\", resource=\"memory\"}) by (namespace, pod , cluster),\n  1\n) * 100 \u003e 90,\n     \"deployment\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]{9,10}-[a-z0-9]{4,5}(-x-.*)?$\"),\n  \"deployment\", \"$1\", \"deployment\", \"^(.*)-[a-z0-9]{9,10}(-x-.*)?$\"),\n\"service\", \"$1\", \"deployment\", \"(.*)\"),\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Pod $1 memory usage is above 85 percent\", \"pod\", \"(.*)\")","for":"3m","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"critical"}},{"alert":"KubePodImagePullBackOff","annotations":{"dashboard_url":"https://grafana.opstree.net/explore","description":"Pod {{$labels.pod}} in namespace {{$labels.namespace}} has a container in ImagePullBackOff for more than 3 minute","message":"Pod {{$labels.pod}} in namespace {{$labels.namespace}} in ImagePullBackOff status","summary":"Pod ImagePullBackOff Detected"},"expr":"label_replace(\nlabel_replace(\n  label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n          rate(kube_pod_container_status_waiting_reason{reason=\"ImagePullBackOff\"}[3m]) * 60 * 3 \u003e 0,\n        \"channel\", \"rems-bp-incident-alerts\", \"cluster\", \"^buildpiper$\"),\n      \"channel\", \"ldc-infra-alerts\", \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n  \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\", \"team\", \"^$\"),\n\"description\", \"Pod $1 is in ImagePullBackOff state\", \"pod\", \"(.*)\")","labels":{"alert":"kubernetes","rems_category":"kubernetes","severity":"warning"}}]}]},"status":{"conditions":[{"lastTransitionTime":"2026-03-19T12:07:38Z","lastUpdateTime":"2026-06-02T05:51:32Z","observedGeneration":33,"reason":"ConfigParsedAndApplied","status":"True","type":"vm.monitoring.vmalert.victoriametrics.com/Applied"}],"observedGeneration":33,"updateStatus":"operational"}}
+    meta.helm.sh/release-name: alert-rules
+    meta.helm.sh/release-namespace: monitoring
+  creationTimestamp: "2026-03-19T12:07:38Z"
+  generation: 58
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: kubernetes-apps-high-rules
+  namespace: monitoring
+  resourceVersion: "60581787"
+  uid: 6cec5ad0-c63b-49f7-a00c-68b2e72c6011
+spec:
+  groups:
+  - name: kubernetes-apps
+    rules:
+    - alert: KubePodRestarting
+      annotations:
+        description: Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container
+          }}) is restarting {{ printf "%.2f" $value }} times / 5 minutes.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping
+        summary: Pod is Restarting.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  sum without(endpoint, job, prometheus) (rate(kube_pod_container_status_restarts_total{namespace=~".*"}[5m]) * 60 * 5) > 1,
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "Pod $1 is restarting frequently", "pod", "(.*)"),
+        "deployment", "$1", "pod", "^(.+)-[a-z0-9]{8,10}-[a-z0-9]{5}(?:-x-.*)?$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22rate%28kube_pod_container_status_restarts_total%7Bpod%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%5B5m%5D%29%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22rate%28kube_pod_container_status_restarts_total%7Bpod%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%5B5m%5D%29%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubePodNotReady
+      annotations:
+        affected_component: '{{ $labels.pod }}'
+        description: Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready
+          state for longer than 5 minutes.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready
+        summary: Pod has been in a non-ready state for more than 10 minutes.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  sum by (namespace, pod, env, cluster, container) (
+            max by(namespace, pod, env, cluster, container) (
+              kube_pod_status_phase{job="kube-state-metrics", namespace=~".*", phase=~"Pending|Unknown"}
+            ) * on(namespace, pod) group_left(owner_kind, env) topk by(namespace, pod) (
+              1, max by(namespace, pod, owner_kind, env) (kube_pod_owner{owner_kind!="Job"})
+            )
+          ) > 0,
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "container", "$1", "container", "(.+)"),
+        "error_message", "Pod $1 is not ready for more than 10 minutes", "pod", "(.*)"),
+        "deployment", "$1", "owner_name", "^(.*)-[a-z0-9]+-[a-z0-9]+$"),
+        "daemonset", "$1", "owner_name", "^(.*)$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_pod_status_phase%7Bpod%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_pod_status_phase%7Bpod%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 10m
+      labels:
+        alert: kubernetes
+        env: prod
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeDeploymentGenerationMismatch
+      annotations:
+        description: Deployment generation for {{ $labels.namespace }}/{{ $labels.deployment
+          }} does not match, this indicates that the Deployment has failed but has
+          not been rolled back.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentgenerationmismatch
+        summary: Deployment generation mismatch due to possible roll-back
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  kube_deployment_status_observed_generation{job="kube-state-metrics", namespace=~".*"}
+          !=
+        kube_deployment_metadata_generation{job="kube-state-metrics", namespace=~".*"},
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "Deployment $1 generation mismatch detected", "deployment", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_deployment_status_observed_generation%7Bdeployment%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_deployment_status_observed_generation%7Bdeployment%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 5m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeDeploymentReplicasMismatch
+      annotations:
+        description: Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has
+          not matched the expected number of replicas for longer than 5 minutes.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentreplicasmismatch
+        summary: Deployment has not matched the expected number of replicas.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  (
+          kube_deployment_spec_replicas{job="kube-state-metrics", namespace=~".*"}
+            * on(namespace, deployment) group_left(pod)
+          label_replace(kube_pod_info{job="kube-state-metrics", namespace=~".*"}, "deployment", "$1", "pod", "^(.*)-[a-z0-9]+-[a-z0-9]+$")
+        )
+            !=
+        (
+          kube_deployment_status_replicas_available{job="kube-state-metrics", namespace=~".*"}
+            * on(namespace, deployment) group_left(pod)
+          label_replace(kube_pod_info{job="kube-state-metrics", namespace=~".*"}, "deployment", "$1", "pod", "^(.*)-[a-z0-9]+-[a-z0-9]+$")
+        ) and on(namespace, deployment) (
+          changes(kube_deployment_status_replicas_updated{job="kube-state-metrics", namespace=~".*"}[5m])
+            ==
+          0
+        ),
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "Deployment $1 replicas mismatch for more than 5 minutes", "deployment", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_deployment_status_replicas_available%7Bdeployment%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_deployment_status_replicas_available%7Bdeployment%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$")
+      for: 5m
+      labels:
+        Owner_Name: Siddharth Gupta
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeStatefulSetReplicasMismatch
+      annotations:
+        description: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }}
+          has not matched the expected number of replicas for longer than 5 minutes.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetreplicasmismatch
+        summary: Deployment has not matched the expected number of replicas.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  (
+          kube_statefulset_status_replicas_ready{job="kube-state-metrics", namespace=~".*"}
+            !=
+          kube_statefulset_status_replicas{job="kube-state-metrics", namespace=~".*"}
+        ) and (
+          changes(kube_statefulset_status_replicas_updated{job="kube-state-metrics", namespace=~".*"}[5m])
+            ==
+          0
+        ),
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "StatefulSet $1 replicas mismatch for more than 5 minutes", "statefulset", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_statefulset_status_replicas_ready%7Bstatefulset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_statefulset_status_replicas_ready%7Bstatefulset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 5m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeStatefulSetGenerationMismatch
+      annotations:
+        description: StatefulSet generation for {{ $labels.namespace }}/{{ $labels.statefulset
+          }} does not match, this indicates that the StatefulSet has failed but has
+          not been rolled back.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetgenerationmismatch
+        summary: StatefulSet generation mismatch due to possible roll-back
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  kube_statefulset_status_observed_generation{job="kube-state-metrics", namespace=~".*"}
+          !=
+        kube_statefulset_metadata_generation{job="kube-state-metrics", namespace=~".*"},
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "StatefulSet $1 generation mismatch detected", "statefulset", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_statefulset_status_observed_generation%7Bstatefulset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_statefulset_status_observed_generation%7Bstatefulset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 5m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeStatefulSetUpdateNotRolledOut
+      annotations:
+        description: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }}
+          update has not been rolled out.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetupdatenotrolledout
+        summary: StatefulSet update has not been rolled out.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  (
+          max without (revision) (
+            kube_statefulset_status_current_revision{job="kube-state-metrics", namespace=~".*"}
+              unless
+            kube_statefulset_status_update_revision{job="kube-state-metrics", namespace=~".*"}
+          )
+            *
+          (
+            kube_statefulset_replicas{job="kube-state-metrics", namespace=~".*"}
+              !=
+            kube_statefulset_status_replicas_updated{job="kube-state-metrics", namespace=~".*"}
+          )
+        )  and (
+          changes(kube_statefulset_status_replicas_updated{job="kube-state-metrics", namespace=~".*"}[5m])
+            ==
+          0
+        ),
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "StatefulSet $1 update not rolled out", "statefulset", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_statefulset_status_replicas_updated%7Bstatefulset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_statefulset_status_replicas_updated%7Bstatefulset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 5m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeDaemonSetRolloutStuck
+      annotations:
+        description: DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} has
+          not finished or progressed for at least 5 minutes.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
+        summary: DaemonSet rollout is stuck.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  (
+          (
+            kube_daemonset_status_current_number_scheduled{job="kube-state-metrics", namespace=~".*"}
+            !=
+            kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics", namespace=~".*"}
+          ) or (
+            kube_daemonset_status_number_misscheduled{job="kube-state-metrics", namespace=~".*"}
+            !=
+            0
+          ) or (
+            kube_daemonset_updated_number_scheduled{job="kube-state-metrics", namespace=~".*"}
+            !=
+            kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics", namespace=~".*"}
+          ) or (
+            kube_daemonset_status_number_available{job="kube-state-metrics", namespace=~".*"}
+            !=
+            kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics", namespace=~".*"}
+          )
+        ) and (
+          changes(kube_daemonset_updated_number_scheduled{job="kube-state-metrics", namespace=~".*"}[5m])
+            ==
+          0
+        ),
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "DaemonSet $1 rollout is stuck for more than 5 minutes", "daemonset", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_daemonset_status_number_available%7Bdaemonset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_daemonset_status_number_available%7Bdaemonset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 5m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeContainerWaiting
+      annotations:
+        description: Pod {{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container}}
+          has been in waiting state for longer than 0.5 hour.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecontainerwaiting
+        summary: Pod container waiting longer than 0.5 hour
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  label_replace( label_replace( sum by (namespace, pod, container, env,cluster) (kube_pod_container_status_waiting_reason{job="kube-state-metrics",namespace=~".*"}) > 0, "team", "olly", "cluster", "base-vcluster"), "team","buildpiper", "cluster", "buildpiper"),
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "Pod $1 has been in waiting state for more than 0.5 hour", "pod", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_pod_container_status_waiting_reason%7Bpod%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_pod_container_status_waiting_reason%7Bpod%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 30m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeDaemonSetNotScheduled
+      annotations:
+        description: '{{ $value }} Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset
+          }} are not scheduled.'
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetnotscheduled
+        summary: DaemonSet pods are not scheduled.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  (
+          sum without(endpoint, prometheus, job) (kube_daemonset_status_desired_number_scheduled{namespace=~".*"})
+          -
+          sum without(endpoint, prometheus, job) (kube_daemonset_status_current_number_scheduled{namespace=~".*"}) ) > 0,
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "DaemonSet $1 pods are not scheduled", "daemonset", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_daemonset_status_current_number_scheduled%7Bdaemonset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_daemonset_status_current_number_scheduled%7Bdaemonset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 5m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeDaemonSetMisScheduled
+      annotations:
+        description: '{{ $value }} Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset
+          }} are running where they are not supposed to run.'
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetmisscheduled
+        summary: DaemonSet pods are misscheduled.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  kube_daemonset_status_number_misscheduled{job="kube-state-metrics", namespace=~".*"} > 0,
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "DaemonSet $1 pods are misscheduled", "daemonset", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_daemonset_status_number_misscheduled%7Bdaemonset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_daemonset_status_number_misscheduled%7Bdaemonset%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 5m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: KubeJobFailed
+      annotations:
+        description: Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to
+          complete.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobfailed
+        summary: Job failed to complete.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  kube_job_failed{job="kube-state-metrics", namespace=~".*"}  > 0,
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "Job failed to complete in namespace $1", "namespace", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_job_failed%7Bjob_name%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_job_failed%7Bjob_name%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 5m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: high
+    - alert: KubeHpaReplicasMismatch
+      annotations:
+        description: HPA {{ $labels.namespace }}/{{ $labels.hpa }} has not matched
+          the desired number of replicas for longer than 5 minutes.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpareplicasmismatch
+        summary: HPA has not matched desired number of replicas.
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  (kube_hpa_status_desired_replicas{job="kube-state-metrics", namespace=~".*"}
+          !=
+        kube_hpa_status_current_replicas{job="kube-state-metrics", namespace=~".*"})
+          and
+        changes(kube_hpa_status_current_replicas[15m]) == 0,
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "HPA replicas mismatch in namespace $1", "namespace", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_hpa_status_current_replicas%7Bhpa%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_hpa_status_current_replicas%7Bhpa%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      for: 15m
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: high
+    - alert: KubePodRestartingOOM
+      annotations:
+        description: Pod {{$labels.pod}} in namespace {{$labels.namespace}} has a
+          container terminated for more than 1 minute
+        message: Pod {{$labels.pod}} in namespace {{$labels.namespace}} in terminated
+          status
+        summary: Pod Container OOMKilled Detected
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace( label_replace( label_replace( label_replace( sum without(endpoint, job, prometheus) (kube_pod_container_status_terminated_reason{reason="OOMKilled"}) > 0, "team", "olly", "cluster", "base-vcluster"), "team", "buildpiper", "cluster", "buildpiper"), "communication-channel", "ldc-infra-alerts", "cluster", "base-vcluster"), "communication-channel", "rems-bp-incident-alerts", "cluster", "buildpiper"),
+        "error_message", "Pod $1 is OOMKilled", "pod", "(.*)"),        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_pod_container_status_terminated_reason%7Bpod%3D%5C%22$1%5C%22%2Creason%3D%5C%22OOMKilled%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_pod_container_status_terminated_reason%7Bpod%3D%5C%22$1%5C%22%2Creason%3D%5C%22OOMKilled%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      labels:
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+    - alert: PodHighCpuUsage
+      annotations:
+        error_message: Pod {{ $labels.pod }} in cluster {{ $labels.cluster }} is using
+          more than 70% of CPU.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md
+        summary: 'Warning: Pod CPU usage is high.'
+      expr: "label_replace(\nlabel_replace(\nlabel_replace(\nlabel_replace(\nlabel_replace(\nlabel_replace(\nlabel_replace(\nlabel_replace(\nlabel_replace(\n
+        \ label_replace(\n    label_replace(\n      label_replace(\n        label_replace(\n
+        \       label_replace(\n          (\n  sum(rate(container_cpu_usage_seconds_total{namespace=~\".*\",
+        container!=\"POD\", container!=\"\", pod!=\"\"}[5m])) by (namespace, pod ,
+        cluster)\n  ) /\n(\n  sum(kube_pod_container_resource_limits{namespace=~\".*\",
+        pod=~\".*\", resource=\"cpu\"}) by (namespace, pod , cluster)\n  ) * 100 >
+        70,\n        \"communication-channel\", \"rems-bp-incident-alerts\", \"cluster\",
+        \"^buildpiper$\"),\n      \"communication-channel\", \"ldc-infra-alerts\",
+        \"channel\", \"^$\"),\n    \"team\", \"buildpiper\", \"cluster\", \"^buildpiper$\"),\n
+        \ \"team\", \"olly\", \"cluster\", \"^base-vcluster$\"),\n\"team\", \"devops\",
+        \"team\", \"^$\"),\n\"error_message\", \"Pod $1 CPU usage is above 70 percent\",
+        \"pod\", \"(.*)\"),\n\"dashboard_url\", \"https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22rate%28container_cpu_usage_seconds_total%7Bpod%3D%5C%22$1%5C%22,cluster%3D%5C%22buildpiper%5C%22%7D%5B5m%5D%29%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2\",
+        \"cluster\", \"^buildpiper$\"),\n\"dashboard_url\", \"https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22rate%28container_cpu_usage_seconds_total%7Bpod%3D%5C%22$1%5C%22,cluster%3D%5C%22base-vcluster%5C%22%7D%5B5m%5D%29%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2\",
+        \"cluster\", \"^base-vcluster$\"),\n\"deployment\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]{9,10}-[a-z0-9]{4,5}$\"),\n\"daemonset\",
+        \"$1\", \"pod\", \"^(.*)-[a-z0-9]{5}$\"), \n\"service\", \"$1\", \"deployment\",
+        \"^(.*)$\"),\n\"service\", \"$1\", \"daemonset\", \"^(.*)$\"),\n\"threshold\",
+        \"70%\", \"\", \"\"),\n\"current_value\", \"above 70%\", \"\", \"\")"
+      labels:
+        Env: prod
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+        sop: https://opstree.com/sop/pod-high-cpu
+    - alert: PodHighMemoryUsage
+      annotations:
+        description: Pod {{ $labels.pod }} is using more than 85% of its memory limit.
+        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md
+        summary: 'Critical: Pod memory usage is very high.'
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  label_replace(
+          label_replace(
+            label_replace(
+        (
+          sum(container_memory_usage_bytes{namespace=~".*", container!="POD", container!="", pod!=""}) by (namespace, pod , cluster)
+        ) / clamp_min(
+          sum(kube_pod_container_resource_limits{namespace=~".*", pod=~".*", resource="memory"}) by (namespace, pod , cluster),
+          1
+        ) * 100 > 90,
+             "deployment", "$1", "pod", "^(.*)-[a-z0-9]{9,10}-[a-z0-9]{4,5}(-x-.*)?$"),
+          "deployment", "$1", "deployment", "^(.*)-[a-z0-9]{9,10}(-x-.*)?$"),
+        "service", "$1", "deployment", "(.*)"),
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "Pod $1 memory usage is above 85 percent", "pod", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22container_memory_usage_bytes%7Bpod%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22container_memory_usage_bytes%7Bpod%3D%5C%22$1%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$"),
+        "threshold", "90%", "", ""),
+        "current_value", "above 90%", "", ""),
+        "daemonset", "$1", "pod", "^(.*)-[a-z0-9]{5}$"),
+        "service", "$1", "daemonset", "^(.*)$")
+      for: 3m
+      labels:
+        Env: prod
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: critical
+    - alert: KubePodImagePullBackOff
+      annotations:
+        error_message: Pod {{$labels.pod}} in namespace {{$labels.namespace}} has
+          a container in ImagePullBackOff for more than 3 minute
+        message: Pod {{$labels.pod}} in namespace {{$labels.namespace}} in ImagePullBackOff
+          status
+        summary: Pod ImagePullBackOff Detected
+      expr: |-
+        label_replace(
+        label_replace(
+        label_replace(
+        label_replace(
+          label_replace(
+            label_replace(
+              label_replace(
+                label_replace(
+                  rate(kube_pod_container_status_waiting_reason{reason="ImagePullBackOff"}[3m]) * 60 * 3 > 0,
+                "communication-channel", "rems-bp-incident-alerts", "cluster", "^buildpiper$"),
+              "communication-channel", "ldc-infra-alerts", "channel", "^$"),
+            "team", "buildpiper", "cluster", "^buildpiper$"),
+          "team", "olly", "cluster", "^base-vcluster$"),
+        "team", "devops", "team", "^$"),
+        "error_message", "Pod $1 is in ImagePullBackOff state", "pod", "(.*)"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_pod_container_status_waiting_reason%7Bpod%3D%5C%22$1%5C%22%2Creason%3D%5C%22ImagePullBackOff%5C%22%2Ccluster%3D%5C%22buildpiper%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^buildpiper$"),
+        "dashboard_url", "https://grafana.opstree.net/explore?schemaVersion=1&panes=%7B%22gw4%22:%7B%22datasource%22:%22victoriametrics%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22kube_pod_container_status_waiting_reason%7Bpod%3D%5C%22$1%5C%22%2Creason%3D%5C%22ImagePullBackOff%5C%22%2Ccluster%3D%5C%22base-vcluster%5C%22%7D%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=2", "cluster", "^base-vcluster$")
+      labels:
+        Env: prod
+        alert: kubernetes
+        rems_category: kubernetes
+        severity: warning
+status:
+  conditions:
+  - lastTransitionTime: "2026-03-19T12:07:38Z"
+    lastUpdateTime: "2026-06-15T08:04:51Z"
+    observedGeneration: 58
+    reason: ConfigParsedAndApplied
+    status: "True"
+    type: vm.monitoring.vmalert.victoriametrics.com/Applied
+  observedGeneration: 58
+  updateStatus: operational
