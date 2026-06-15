@@ -26,5 +26,11 @@ pipeline {
                 sh '/tmp/python/bin/python3 convert.py'
             }
         }
+
+        stage('Generate Postman Collection') {
+            steps {
+                sh '/tmp/python/bin/python3 generate_postman.py'
+            }
+        }
     }
 }
