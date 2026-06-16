@@ -67,9 +67,24 @@ def build_grafana_json(rule):
         ]
     }
 
-def build_postman_request(alert_name, grafana_json):
+def build_create_request(alert_name, grafana_json):
     return {
         "name": f"Create-{alert_name}",
+        "event": [
+            {
+                "listen": "test",
+                "script": {
+                    "exec": [
+                        f"var jsonData = pm.response.json();",
+                        f"if (jsonData.uid) {{",
+                        f"    pm.environment.set('UID_{alert_name}', jsonData.uid);",
+                        f"    console.log('UID saved: ' + jsonData.uid);",
+                        f"}}"
+                    ],
+                    "type": "text/javascript"
+                }
+            }
+        ],
         "request": {
             "method": "POST",
             "header": [
@@ -86,6 +101,58 @@ def build_postman_request(alert_name, grafana_json):
                 "mode": "raw",
                 "raw": json.dumps(grafana_json, indent=2),
                 "options": {"raw": {"language": "json"}}
+            }
+        }
+    }
+
+def build_get_request(alert_name):
+    return {
+        "name": f"Get-{alert_name}",
+        "event": [
+            {
+                "listen": "test",
+                "script": {
+                    "exec": [
+                        f"var jsonData = pm.response.json();",
+                        f"var alert = jsonData.find(a => a.title === '{alert_name}');",
+                        f"if (alert) {{",
+                        f"    pm.environment.set('UID_{alert_name}', alert.uid);",
+                        f"    console.log('UID found: ' + alert.uid);",
+                        f"}} else {{",
+                        f"    console.log('Alert {alert_name} not found');",
+                        f"}}"
+                    ],
+                    "type": "text/javascript"
+                }
+            }
+        ],
+        "request": {
+            "method": "GET",
+            "header": [
+                {"key": "Authorization", "value": "Bearer {{TOKEN}}"},
+                {"key": "X-Disable-Provenance", "value": "true"}
+            ],
+            "url": {
+                "raw": "{{BASE_URL}}/api/v1/provisioning/alert-rules",
+                "host": ["{{BASE_URL}}"],
+                "path": ["api", "v1", "provisioning", "alert-rules"]
+            }
+        }
+    }
+
+def build_delete_request(alert_name):
+    return {
+        "name": f"Delete-{alert_name}",
+        "request": {
+            "method": "DELETE",
+            "header": [
+                {"key": "Authorization", "value": "Bearer {{TOKEN}}"},
+                {"key": "X-Disable-Provenance", "value": "true"}
+            ],
+            "url": {
+                "raw": "{{BASE_URL}}/api/v1/provisioning/alert-rules/{{UID_" + alert_name + "}}",
+                "host": ["{{BASE_URL}}"],
+                "path": ["api", "v1", "provisioning", "alert-rules", "{{UID_" + alert_name + "}}"]
             }
         }
     }
@@ -117,10 +184,11 @@ for file in os.listdir(input_dir):
                 json.dump(grafana_json, f, indent=2)
             print(f"  Converted: {alert_name} → {json_file}")
 
-            # Postman collection me add karo
-            postman_collection["item"].append(
-                build_postman_request(alert_name, grafana_json)
-            )
+            # Teenon requests add karo
+            postman_collection["item"].append(build_create_request(alert_name, grafana_json))
+            postman_collection["item"].append(build_get_request(alert_name))
+            postman_collection["item"].append(build_delete_request(alert_name))
+
 # Postman collection save karo
 with open("postman_collection.json", "w") as f:
     json.dump(postman_collection, f, indent=2)
